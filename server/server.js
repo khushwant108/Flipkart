@@ -12,24 +12,29 @@ const wishlistRoutes = require('./routes/wishlistRoutes');
 const app = express();
 
 // CLIENT_URL supports multiple comma-separated origins
-// e.g. CLIENT_URL=https://flipkart-ecru-rho.vercel.app,https://other.vercel.app
 const allowedOrigins = [
   'http://localhost:5173',
   ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(u => u.trim()) : []),
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, curl, Render health checks)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS blocked: ${origin}`);
-      callback(new Error(`CORS: origin ${origin} not allowed`));
-    }
-  },
-  credentials: true,
-}));
+// ── CORS must be the very first middleware ──────────────────────────────────
+// Set headers manually so they are present even on 500 errors (Express's
+// error handler would otherwise strip them, making the browser report CORS).
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  // Respond immediately to preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(express.json());
 
 app.use('/api/products', productRoutes);
