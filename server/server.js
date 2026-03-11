@@ -11,17 +11,20 @@ const wishlistRoutes = require('./routes/wishlistRoutes');
 
 const app = express();
 
+// CLIENT_URL supports multiple comma-separated origins
+// e.g. CLIENT_URL=https://flipkart-ecru-rho.vercel.app,https://other.vercel.app
 const allowedOrigins = [
   'http://localhost:5173',
-  process.env.CLIENT_URL,
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(u => u.trim()) : []),
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, curl)
+    // Allow requests with no origin (e.g. mobile apps, curl, Render health checks)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`CORS blocked: ${origin}`);
       callback(new Error(`CORS: origin ${origin} not allowed`));
     }
   },
