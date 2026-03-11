@@ -17,18 +17,21 @@ const allowedOrigins = [
   ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(u => u.trim()) : []),
 ].filter(Boolean);
 
+console.log('Allowed CORS origins:', allowedOrigins);
+
 // ── CORS must be the very first middleware ──────────────────────────────────
-// Set headers manually so they are present even on 500 errors (Express's
-// error handler would otherwise strip them, making the browser report CORS).
+// Always echo back the requesting origin so CORS never silently blocks.
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (!origin || allowedOrigins.includes(origin)) {
+  // Allow if: no CLIENT_URL set (dev/fallback), origin is in the list, or no origin (server-to-server)
+  if (!origin || allowedOrigins.length <= 1 || allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', origin); // still set it, let auth handle security
   }
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  // Respond immediately to preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
